@@ -388,6 +388,13 @@ typedef struct _ITEM_NETWORK
 	ULONG app_hash;
 	ULONG state;
 
+	LONG64 timestamp;
+	LONG64 last_time;
+	LONG64 in_bytes;
+	LONG64 out_bytes;
+	LONG64 in_speed;
+	LONG64 out_speed;
+
 	FWP_DIRECTION direction;
 	ENUM_TYPE_DATA type;
 	ADDRESS_FAMILY af;

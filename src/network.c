@@ -153,6 +153,7 @@ VOID _app_network_generatetable (
 				ptr_network->local_port = _r_byteswap_ushort ((USHORT)tcp4_table->table[i].dwLocalPort);
 
 				ptr_network->state = tcp4_table->table[i].dwState;
+				ptr_network->timestamp = _r_unixtime_now ();
 
 				if (tcp4_table->table[i].dwState == MIB_TCP_STATE_ESTAB)
 				{
@@ -230,6 +231,7 @@ VOID _app_network_generatetable (
 				ptr_network->local_port = _r_byteswap_ushort ((USHORT)tcp6_table->table[i].dwLocalPort);
 
 				ptr_network->state = tcp6_table->table[i].dwState;
+				ptr_network->timestamp = _r_unixtime_now ();
 
 				if (tcp6_table->table[i].dwState == MIB_TCP_STATE_ESTAB)
 				{
@@ -309,6 +311,8 @@ VOID _app_network_generatetable (
 				if (_app_network_isvalidconnection (ptr_network->af, &ptr_network->local_addr))
 					ptr_network->is_connection = TRUE;
 
+				ptr_network->timestamp = _r_unixtime_now ();
+
 				_r_queuedlock_acquireexclusive (&network_context->lock_network);
 				_r_obj_addhashtablepointer (network_context->network_ptr, network_hash, ptr_network);
 				_r_queuedlock_releaseexclusive (&network_context->lock_network);
@@ -376,6 +380,8 @@ VOID _app_network_generatetable (
 
 				if (_app_network_isvalidconnection (ptr_network->af, &ptr_network->local_addr6))
 					ptr_network->is_connection = TRUE;
+
+				ptr_network->timestamp = _r_unixtime_now ();
 
 				_r_queuedlock_acquireexclusive (&network_context->lock_network);
 				_r_obj_addhashtablepointer (network_context->network_ptr, network_hash, ptr_network);
@@ -686,6 +692,37 @@ VOID _app_network_printlistviewtable (
 
 		_app_listview_addnetworkitem (network_context->hwnd, network_hash);
 
+		if (ptr_network->protocol == IPPROTO_TCP)
+		{
+			MIB_TCPROW row;
+			TCP_ESTATS_DATA_ROD_v0 data_rod;
+
+			row.dwLocalAddr = ptr_network->local_addr.S_un.S_addr;
+			row.dwLocalPort = _r_byteswap_ushort (ptr_network->local_port);
+			row.dwRemoteAddr = ptr_network->remote_addr.S_un.S_addr;
+			row.dwRemotePort = _r_byteswap_ushort (ptr_network->remote_port);
+
+			if (GetPerTcpConnectionEStats (&row, TcpConnectionEstatsData, (PBYTE)&data_rod, 0, sizeof (data_rod), NULL, 0, 0) == NO_ERROR)
+			{
+				ptr_network->in_bytes = data_rod.DataBytesIn;
+				ptr_network->out_bytes = data_rod.DataBytesOut;
+			}
+		}
+		else if (ptr_network->protocol == IPPROTO_UDP)
+		{
+			MIB_UDPROW row;
+			UDP_ESTATS_DATA_ROD_v0 data_rod;
+
+			row.dwLocalAddr = ptr_network->local_addr.S_un.S_addr;
+			row.dwLocalPort = _r_byteswap_ushort (ptr_network->local_port);
+
+			if (GetPerUdpConnectionEStats (&row, UdpConnectionEstatsData, (PBYTE)&data_rod, 0, sizeof (data_rod), NULL, 0, 0) == NO_ERROR)
+			{
+				ptr_network->in_bytes = data_rod.DataBytesIn;
+				ptr_network->out_bytes = data_rod.DataBytesOut;
+			}
+		}
+
 		if (ptr_network->path && ptr_network->app_hash)
 			_app_getfileinformation (ptr_network->path, ptr_network->app_hash, ptr_network->type, IDC_NETWORK);
 
@@ -751,6 +788,10 @@ VOID NTAPI _app_network_threadproc (
 )
 {
 	PITEM_NETWORK_CONTEXT network_context;
+	PITEM_NETWORK ptr_network = NULL;
+	ULONG_PTR enum_key = 0;
+	LONG64 current_time;
+	LONG64 time_diff;
 
 	network_context = (PITEM_NETWORK_CONTEXT)arglist;
 
@@ -758,9 +799,32 @@ VOID NTAPI _app_network_threadproc (
 	{
 		// update network table
 		_app_network_generatetable (network_context);
+
+		current_time = _r_unixtime_now ();
+
+		_r_queuedlock_acquireshared (&network_context->lock_network);
+
+		while (_r_obj_enumhashtablepointer (network_context->network_ptr, &ptr_network, NULL, &enum_key))
+		{
+			if (ptr_network->last_time)
+			{
+				time_diff = current_time - ptr_network->last_time;
+
+				if (time_diff > 0)
+				{
+					ptr_network->in_speed = (ptr_network->in_bytes - ptr_network->in_speed) / time_diff;
+					ptr_network->out_speed = (ptr_network->out_bytes - ptr_network->out_speed) / time_diff;
+				}
+			}
+
+			ptr_network->last_time = current_time;
+		}
+
+		_r_queuedlock_releaseshared (&network_context->lock_network);
+
 		_app_network_printlistviewtable (network_context);
 
-		_r_sys_waitforsingleobject (NtCurrentThread (), 3000);
+		_r_sys_waitforsingleobject (NtCurrentThread (), 1000);
 	}
 
 	_app_network_uninitialize (network_context);

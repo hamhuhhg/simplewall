@@ -429,6 +429,10 @@ VOID _app_message_localize (
 
 				_r_listview_setcolumn (hwnd, tab_context->listview_id, 7, _r_locale_getstring (IDS_PROTOCOL), 0);
 				_r_listview_setcolumn (hwnd, tab_context->listview_id, 8, _r_locale_getstring (IDS_STATE), 0);
+				_r_listview_setcolumn (hwnd, tab_context->listview_id, 9, _r_locale_getstring (IDS_TOTAL_IN), 0);
+				_r_listview_setcolumn (hwnd, tab_context->listview_id, 10, _r_locale_getstring (IDS_TOTAL_OUT), 0);
+				_r_listview_setcolumn (hwnd, tab_context->listview_id, 11, _r_locale_getstring (IDS_SPEED_IN), 0);
+				_r_listview_setcolumn (hwnd, tab_context->listview_id, 12, _r_locale_getstring (IDS_SPEED_OUT), 0);
 
 				break;
 			}
@@ -687,6 +691,7 @@ VOID _app_message_contextmenu (
 			_r_menu_additem (hmenu, IDM_EXPLORE, localized_string->buffer);
 
 			_r_menu_additem (hmenu, IDM_DELETE, _r_locale_getstring (IDS_NETWORK_CLOSE));
+			_r_menu_additem (hmenu, IDM_NETWORK_CLEAR, _r_locale_getstring (IDS_NETWORK_CLEAR));
 			_r_menu_additem (hmenu, 0, NULL);
 
 			_r_obj_movereference (&localized_string, _r_obj_concatstrings (2, _r_locale_getstring (IDS_SELECT_ALL), L"\tCtrl+A"));
@@ -1465,6 +1470,50 @@ VOID _app_displayinfonetwork_callback (
 				if (name)
 					_r_str_copy (lpnmlv->item.pszText, lpnmlv->item.cchTextMax, name);
 
+				break;
+			}
+
+			case 9:
+			{
+				string = _r_format_size (ptr_network->in_bytes, FALSE);
+				if (string)
+				{
+					_r_str_copy (lpnmlv->item.pszText, lpnmlv->item.cchTextMax, string->buffer);
+					_r_obj_dereference (string);
+				}
+				break;
+			}
+
+			case 10:
+			{
+				string = _r_format_size (ptr_network->out_bytes, FALSE);
+				if (string)
+				{
+					_r_str_copy (lpnmlv->item.pszText, lpnmlv->item.cchTextMax, string->buffer);
+					_r_obj_dereference (string);
+				}
+				break;
+			}
+
+			case 11:
+			{
+				string = _r_format_size (ptr_network->in_speed, TRUE);
+				if (string)
+				{
+					_r_str_copy (lpnmlv->item.pszText, lpnmlv->item.cchTextMax, string->buffer);
+					_r_obj_dereference (string);
+				}
+				break;
+			}
+
+			case 12:
+			{
+				string = _r_format_size (ptr_network->out_speed, TRUE);
+				if (string)
+				{
+					_r_str_copy (lpnmlv->item.pszText, lpnmlv->item.cchTextMax, string->buffer);
+					_r_obj_dereference (string);
+				}
 				break;
 			}
 		}
