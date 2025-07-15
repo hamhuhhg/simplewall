@@ -3839,6 +3839,12 @@ INT_PTR CALLBACK DlgProc (
 					break;
 				}
 
+				case IDM_NETWORK_CLEAR:
+				{
+					_app_command_networkclear (hwnd);
+					break;
+				}
+
 				case IDM_LOG_CLEAR:
 				{
 					_app_command_logclear (hwnd);
