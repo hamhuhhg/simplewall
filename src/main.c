@@ -148,6 +148,32 @@ BOOLEAN _app_installmessage (
 	return FALSE;
 }
 
+VOID _app_command_networkclear (
+	_In_ HWND hwnd
+)
+{
+	PITEM_NETWORK_CONTEXT network_context;
+	PITEM_NETWORK ptr_network = NULL;
+	ULONG_PTR enum_key = 0;
+
+	network_context = _app_network_getcontext ();
+
+	if (!network_context)
+		return;
+
+	_r_queuedlock_acquireexclusive (&network_context->lock_network);
+
+	while (_r_obj_enumhashtablepointer (network_context->network_ptr, &ptr_network, NULL, &enum_key))
+	{
+		ptr_network->in_bytes = 0;
+		ptr_network->out_bytes = 0;
+		ptr_network->in_speed = 0;
+		ptr_network->out_speed = 0;
+	}
+
+	_r_queuedlock_releaseexclusive (&network_context->lock_network);
+}
+
 VOID _app_config_apply (
 	_In_ HWND hwnd,
 	_In_opt_ HWND hsettings,
@@ -3804,6 +3830,18 @@ INT_PTR CALLBACK DlgProc (
 				case IDM_OPENRULESEDITOR:
 				{
 					_app_command_openeditor (hwnd);
+					break;
+				}
+
+				case IDM_NETWORK_CLEAR:
+				{
+					_app_command_networkclear (hwnd);
+					break;
+				}
+
+				case IDM_LOG_CLEAR:
+				{
+					_app_command_logclear (hwnd);
 					break;
 				}
 

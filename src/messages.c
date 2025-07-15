@@ -692,6 +692,7 @@ VOID _app_message_contextmenu (
 
 			_r_menu_additem (hmenu, IDM_DELETE, _r_locale_getstring (IDS_NETWORK_CLOSE));
 			_r_menu_additem (hmenu, IDM_NETWORK_CLEAR, _r_locale_getstring (IDS_NETWORK_CLEAR));
+			_r_menu_additem (hmenu, IDM_LOG_CLEAR, _r_locale_getstring (IDS_LOGCLEAR));
 			_r_menu_additem (hmenu, 0, NULL);
 
 			_r_obj_movereference (&localized_string, _r_obj_concatstrings (2, _r_locale_getstring (IDS_SELECT_ALL), L"\tCtrl+A"));
